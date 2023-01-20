@@ -1,178 +1,218 @@
-﻿// https://www.youtube.com/watch?v=QQs9MWLU_tU
-
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 public class RobotController : MonoBehaviour
 {
     // naming constraints do not change
-    [SerializeField] private WheelCollider frontLeftWheelCollider;
-    [SerializeField] private WheelCollider frontRightWheelCollider;
-    [SerializeField] private WheelCollider rearLeftWheelCollider;
-    [SerializeField] private WheelCollider rearRightWheelCollider;
+    [SerializeField] private WheelCollider FLWC;
+    [SerializeField] private WheelCollider FRWC;
+    [SerializeField] private WheelCollider BLWC;
+    [SerializeField] private WheelCollider BRWC;
 
-    [SerializeField] private Transform frontLeftWheelTransform;
-    [SerializeField] private Transform frontRightWheelTransform;
-    [SerializeField] private Transform rearLeftWheelTransform;
-    [SerializeField] private Transform rearRightWheelTransform;
+    [SerializeField] private Transform FLWT;
+    [SerializeField] private Transform FRWT;
+    [SerializeField] private Transform BLWT;
+    [SerializeField] private Transform BRWT;
 
-    [SerializeField] private Transform SensorFR;
-    [SerializeField] private Transform SensorL1;
-    [SerializeField] private Transform SensorL2;
-    [SerializeField] private Transform SensorL3;
-    [SerializeField] private Transform SensorR1;
-    [SerializeField] private Transform SensorR2;
-    [SerializeField] private Transform SensorR3;
-    [SerializeField] private Transform SensorOR;
+    [SerializeField] private Transform SFR;
+    [SerializeField] private Transform SL1;
+    [SerializeField] private Transform SL2;
+    [SerializeField] private Transform SL3;
+    [SerializeField] private Transform SR1;
+    [SerializeField] private Transform SR2;
+    [SerializeField] private Transform SR3;
+    [SerializeField] private Transform SOR;
 
-    [SerializeField] private float maxSteeringAngle;
-    [SerializeField] private float motorForce;
+    [SerializeField] private float maxSteeringAngle = 30;
+    [SerializeField] private float motorForce = 50;
     [SerializeField] private float brakeForce;
 
-    private Rigidbody rb;
-        [SerializeField] private float angle_x;
-        [SerializeField] private float angle_y;
-        [SerializeField] private float angle_z;
-        [SerializeField] private float velocity;
-
-        private float steerAngle;
-        private bool isBreaking;
-
-        private float s1dist = 5;
-        private float s3dist = 4;
-
-    private void AdjustSensors(Transform sensor, float x_angle, float y_angle, float z_angle)
-    {
-        sensor.transform.Rotate(x_angle, y_angle, z_angle);
-    }
     private void Start()
     {
         rb = GetComponent<Rigidbody>();
-        float s1x = 0; float s1y = 10; float s1z = 0;
-         float s3x = 16; float s3y = 50; float s3z = 0;
 
-         AdjustSensors(SensorFR, 20, 0, 0);
-         AdjustSensors(SensorL1, s1x, -s1y, s1z);
-         AdjustSensors(SensorL3, s3x, -s3y, s3z);
-         AdjustSensors(SensorR1, s1x, s1y, s1z);
-         AdjustSensors(SensorR3, s3x, s3y, s3z);
-         AdjustSensors(SensorOR, 50, 180, 0);
+        float s1x = 0; float s1y = 10; float s1z = 0;
+        float s2x = 8; float s2y = 30; float s2z = 0;
+        float s3x = 16; float s3y = 60; float s3z = 0;
+
+        positionSensors(SFR, 20, 0, 0);
+        positionSensors(SL1, s1x, -s1y, s1z);
+        positionSensors(SL2, s2x, -s2y, s2z);
+        positionSensors(SL3, s3x, -s3y, s3z);
+        positionSensors(SR1, s1x, s1y, s1z);
+        positionSensors(SR2, s2x, s2y, s2z);
+        positionSensors(SR3, s3x, s3y, s3z);
+        positionSensors(SOR, 50, 180, 0);
+    }
+    
+    private Rigidbody rb;
+    [SerializeField] private float angle_x;
+    [SerializeField] private float angle_z;
+    [SerializeField] private float CarVelocity;
+
+    private float steerAngle;
+    private bool isBreaking;
+
+    private float s1dist = 5;
+    private float s2dist = 6;
+    private float s3dist = 6;
+
+    private void positionSensors(Transform sensor, float x_angle, float y_angle, float z_angle)
+    {
+        sensor.transform.Rotate(x_angle, y_angle, z_angle);
     }
 
     private void HandleMotor()
     {
-        frontLeftWheelCollider.motorTorque = motorForce;
-        frontRightWheelCollider.motorTorque = motorForce;
-        rearRightWheelCollider.motorTorque = motorForce;
-        rearLeftWheelCollider.motorTorque = motorForce;
+        float CurrentAcceleration;
+
+        CurrentAcceleration = isBreaking ? 0 : motorForce;
+        FRWC.motorTorque = CurrentAcceleration;
+        FLWC.motorTorque = CurrentAcceleration;
+        BLWC.motorTorque = CurrentAcceleration;
+        BRWC.motorTorque = CurrentAcceleration;
 
         brakeForce = isBreaking ? 3000f : 0f;
-        frontRightWheelCollider.brakeTorque = brakeForce;
-        frontLeftWheelCollider.brakeTorque = brakeForce;
-        rearLeftWheelCollider.brakeTorque = brakeForce;
-        rearRightWheelCollider.brakeTorque = brakeForce;
+        FLWC.brakeTorque = brakeForce;
+        FRWC.brakeTorque = brakeForce;
+        BLWC.brakeTorque = brakeForce;
+        BRWC.brakeTorque = brakeForce;
 
-    }
-
-    
-
-    private void UpdateWheelPos(WheelCollider wheelCollider, Transform trans)
+    }   
+    private void UpdateWheelPosition(WheelCollider Collider, Transform trans)
     {
-        Vector3 pos;
-        Quaternion rot;
-        wheelCollider.GetWorldPose(out pos, out rot);
-        trans.rotation = rot;
-        trans.position = pos;
+        Vector3 position;
+        Quaternion rotation;
+        Collider.GetWorldPose(out position, out rotation);
+        trans.position = position;
+        trans.rotation = rotation;
+
     }
     private void UpdateWheels()
     {
-        UpdateWheelPos(frontLeftWheelCollider, frontLeftWheelTransform);
-        UpdateWheelPos(frontRightWheelCollider, frontRightWheelTransform);
-        UpdateWheelPos(rearLeftWheelCollider, rearLeftWheelTransform);
-        UpdateWheelPos(rearRightWheelCollider, rearRightWheelTransform);
+        UpdateWheelPosition(FLWC, FLWT);
+        UpdateWheelPosition(FRWC, FRWT);
+        UpdateWheelPosition(BLWC, BLWT);
+        UpdateWheelPosition(BRWC, BRWT);
     }
 
-    private void HandleSteering(float direction)
-
+    private void ControlSteering(float direction)
     {
-        steerAngle = maxSteeringAngle * direction;
-        frontLeftWheelCollider.steerAngle = steerAngle;
-        frontRightWheelCollider.steerAngle = steerAngle;
+        steerAngle = direction * maxSteeringAngle;
+        FLWC.steerAngle = steerAngle;
+        FRWC.steerAngle = steerAngle;
     }
 
-    private bool sense(Transform sensor, float dist)
+    private bool sense(Transform sensor, float dist, string layer)
+               
     {
-        if (Physics.Raycast(sensor.position, sensor.TransformDirection(Vector3.forward), dist))
+        LayerMask mask = LayerMask.GetMask(layer);  //the layer mask enables the sensor to detect the road
+        if (Physics.Raycast(sensor.position, sensor.TransformDirection(Vector3.forward), dist, mask))
         {
             Debug.DrawRay(sensor.position, sensor.TransformDirection(Vector3.forward) * dist, Color.yellow);
             return true;
+
         }
         else
         {
-             Debug.DrawRay(sensor.position, sensor.TransformDirection(Vector3.forward) * dist, Color.white);
+            Debug.DrawRay(sensor.position, sensor.TransformDirection(Vector3.forward) * dist, Color.white);
             return false;
-        }
-    }
-    private void StayOnRoad()
-    {
-        if (!sense(SensorL3, s3dist)  || !sense(SensorR3, s3dist))
-        {
-            if (!sense(SensorL3, s3dist))
-            {
-                HandleSteering(1);
-            }
-            if (!sense(SensorR3, s3dist))
-            {
-                HandleSteering(-1);
-            }
-        }
-            else
-            {
-                HandleSteering(0);
-            }
-        }
-    
-    private void AdjustSpeed()
-    {
-        if (velocity < 2 & motorForce < 50)
-        {
-            motorForce = motorForce + 10f;
-        }
-        if (velocity > 4 & motorForce > 0)
-        {
-            motorForce = motorForce -10f;
+
         }
     }
 
-    private void AvoidObstacles()
+    private void MaintainTrack()
     {
-        if (sense(SensorL1, s1dist))
+        if (!sense(SL3, s3dist, "Road") || !sense(SR3, s3dist, "Road") )
         {
-            HandleSteering(1);
+           
+            if (!sense(SL3, s3dist, "Road"))
+            {
+                ControlSteering(1);           
+            }
+            if (!sense(SR3, s3dist, "Road"))
+            {
+                ControlSteering(-1);       
+            }
         }
-        if (sense(SensorR1, s1dist))
+        else
         {
-            HandleSteering(-1);
+            ControlSteering(0);
         }
     }
 
-    private void FixedUpdate()
+    private void VarySpeed()
+
     {
-        StayOnRoad();
-        AvoidObstacles();
-        AdjustSpeed();
+        
+        if (CarVelocity < 2 && motorForce <= 50)
+        {
+            motorForce = motorForce + 340f;        
+
+        }
+          
+       else if (CarVelocity > 6 && motorForce > 0)
+        {
+            motorForce = motorForce - 30f;
+        }
+
+       else if (CarVelocity > 12 && motorForce < 0)
+      {
+         motorForce = motorForce -80f;
+       }
+        
+    }
+    private void EvadeObstacles()
+    {
+        if (sense(SL1, s1dist, "Obstacles"))
+        {
+            ControlSteering(1);
+        }
+        if (sense(SR1, s1dist, "Obstacles"))
+        {
+            ControlSteering(-1);
+        }
+        //
+        if (sense(SL2, s2dist, "Obstacles"))
+        {
+            ControlSteering(1);
+        }
+        if (sense(SR2, s2dist, "Obstacles"))
+        {
+            ControlSteering(-1);
+        }
+       
+    }
+
+    private void brake()
+    {                                                                                                      
+        if ( Input.GetKey(KeyCode.Space)) 
+       
+           brakeForce =  3000f;
+           
+       
+       else
+        brakeForce = 0f;
+                                                                                                                     
+
+   }
+   private void FixedUpdate()
+    {
+        MaintainTrack();
+        EvadeObstacles();
+        VarySpeed();
         HandleMotor();
         UpdateWheels();
-        
+        brake();
 
-        angle_x = SensorOR.eulerAngles.x;
-        angle_z = SensorOR.eulerAngles.z;
+        angle_x = SOR.eulerAngles.x;
+        angle_z = SOR.eulerAngles.z;
 
-        velocity = rb.velocity.magnitude;
+        CarVelocity = rb.velocity.magnitude;
+
     }
-    }
 
-
-
+}
